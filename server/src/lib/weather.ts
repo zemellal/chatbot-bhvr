@@ -56,6 +56,12 @@ export interface WeatherstackResponse {
 }
 
 export async function fetchWeather(query: string, apiKey: string) {
+	if (!apiKey) {
+		throw new Error(
+			"Weather API key is missing. Please set WEATHERSTACK_API_KEY in your environment.",
+		);
+	}
+	console.log("fetching external weather api...");
 	const url = `https://api.weatherstack.com/current?access_key=${apiKey}&query=${encodeURIComponent(query)}`;
 	const res = await fetch(url);
 	if (!res.ok) {

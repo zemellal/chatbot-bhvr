@@ -1,8 +1,9 @@
-import { streamText as streamTextAi } from "ai";
+import { generateText, streamText as streamTextAi } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { stream } from "hono/streaming";
 import { getModel } from "./lib/aiProvider";
+import { weatherTool } from "./lib/tools";
 import { fetchWeather } from "./lib/weather";
 
 export const app = new Hono<{ Bindings: CloudflareBindings }>()
@@ -24,11 +25,18 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 				);
 			}
 
-			const model = getModel("ollama", c.env);
+			const model = getModel("groq", c.env);
+			const weatherApiKey = c.env.WEATHERSTACK_API_KEY;
+
+			const toolSet = {
+				weather: weatherTool(weatherApiKey),
+			};
 
 			const result = streamTextAi({
 				model,
 				messages,
+				tools: toolSet,
+				maxSteps: 3,
 			});
 
 			// Mark the response as a v1 data stream:
@@ -39,6 +47,38 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 			return stream(c, (stream) => stream.pipe(result.toDataStream()));
 			// return result.toDataStreamResponse();
 		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			return c.json(
+				{ success: false, error: message || "Unknown error" },
+				{ status: 500 },
+			);
+		}
+	})
+
+	.post("/ai-tool-test", async (c) => {
+		try {
+			const model = getModel("groq", c.env);
+			const weatherApiKey = c.env.WEATHERSTACK_API_KEY;
+
+			const toolSet = {
+				weather: weatherTool(weatherApiKey),
+			};
+
+			// type MyToolCall = ToolCallUnion<typeof myToolSet>;
+			// type MyToolResult = ToolResultUnion<typeof myToolSet>;
+
+			const result = await generateText({
+				model: model,
+				tools: toolSet,
+				maxSteps: 3,
+				prompt: "What is the weather in San Francisco?",
+			});
+
+			console.log(result);
+
+			return c.json({ success: true, message: result.text }, { status: 200 });
+		} catch (err) {
+			console.error("Error in /ai-tool-test:", err);
 			const message = err instanceof Error ? err.message : String(err);
 			return c.json(
 				{ success: false, error: message || "Unknown error" },
