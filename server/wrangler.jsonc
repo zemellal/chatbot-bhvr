@@ -1,6 +1,6 @@
 {
 	"$schema": "../node_modules/wrangler/config-schema.json",
-	"name": "server",
+	"name": "chatbot-server",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-07-23",
 	// "compatibility_flags": [
