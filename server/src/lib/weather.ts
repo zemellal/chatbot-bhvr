@@ -55,17 +55,34 @@ export interface WeatherstackResponse {
 	};
 }
 
-export async function fetchWeather(query: string, apiKey: string) {
+/**
+ * Fetches weather data from the WeatherStack API and caches it in Cloudflare KV.
+ */
+export async function fetchWeather(query: string, env: CloudflareBindings) {
+	const kv = env.CHATBOT_TOOL_KV;
+	const apiKey = env.WEATHERSTACK_API_KEY;
+	const cacheKey = `weather:${query.toLowerCase().trim()}`;
+	const cached = await kv.get(cacheKey, { type: "json" });
+
+	if (cached) {
+		console.log("returning cached weather data from KV...");
+		return cached as WeatherstackResponse;
+	}
+
 	if (!apiKey) {
 		throw new Error(
 			"Weather API key is missing. Please set WEATHERSTACK_API_KEY in your environment.",
 		);
 	}
+
 	console.log("fetching external weather api...");
 	const url = `https://api.weatherstack.com/current?access_key=${apiKey}&query=${encodeURIComponent(query)}`;
 	const res = await fetch(url);
 	if (!res.ok) {
 		throw new Error(`Weather API error: [${res.status}] ${res.statusText}`);
 	}
-	return res.json() as WeatherstackResponse;
+
+	const data = await res.json();
+	await kv.put(cacheKey, JSON.stringify(data), { expirationTtl: 10 * 60 });
+	return data as WeatherstackResponse;
 }

@@ -2,14 +2,23 @@ import { hcWithType } from "server/dist/client";
 import "./App.css";
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef } from "react";
+import { AI_MAX_STEPS } from "shared";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:8787";
 
 const client = hcWithType(SERVER_URL);
 
 function App() {
-	const { messages, input, handleInputChange, handleSubmit, error, reload } =
-		useChat({ api: client.chat.$url().toString() });
+	const {
+		messages,
+		input,
+		handleInputChange,
+		handleSubmit,
+		error,
+		reload,
+		stop,
+		status,
+	} = useChat({ api: client.chat.$url().toString(), maxSteps: AI_MAX_STEPS });
 
 	const chatHistoryRef = useRef<HTMLDivElement>(null);
 
@@ -51,12 +60,24 @@ function App() {
 						onChange={handleInputChange}
 						placeholder="Type your message..."
 					/>
-					<button className="chat-send-btn" type="submit">
+					<button
+						className="chat-send-btn"
+						type="submit"
+						disabled={status !== "ready"}
+					>
 						Send
 					</button>
 				</form>
 			</div>
 
+			{status === "streaming" && (
+				<div>
+					<div>{status}</div>
+					<button type="button" onClick={() => stop()}>
+						Stop
+					</button>
+				</div>
+			)}
 			{error && (
 				<div>
 					<div>An error occurred.</div>

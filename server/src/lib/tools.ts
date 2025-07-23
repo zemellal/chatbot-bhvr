@@ -1,25 +1,37 @@
-import { tool } from "ai";
+import { jsonSchema, tool } from "ai";
 import { fetchWeather } from "../lib/weather";
-import { weatherToolSchema } from "./schemas";
 
-export const weatherTool = (weatherApiKey: string) =>
+const weatherToolSchema = jsonSchema<{
+	name: string;
+}>({
+	type: "object",
+	properties: {
+		name: {
+			type: "string",
+		},
+	},
+	required: ["name"],
+});
+
+const weatherTool = (env: CloudflareBindings) =>
 	tool({
 		description:
 			"Get the current weather in a location. The parameter is called 'name'.",
 		parameters: weatherToolSchema,
 		execute: async ({ name }) => {
 			console.log("execute weather tool");
-			const weather = await fetchWeather(name, weatherApiKey);
-
-			if (
-				weather.current &&
-				weather.current.temperature !== undefined &&
-				weather.location &&
-				weather.location.name
-			) {
-				return `The weather in ${weather.location.name} is ${weather.current.temperature}°${weather.request?.unit === "m" ? "C" : "F"} with ${weather.current.weather_descriptions?.[0]}.`;
-			} else {
-				return `Sorry, I couldn't fetch the weather for "${name}". Please check the location name and try again.`;
-			}
+			const w = await fetchWeather(name, env);
+			return {
+				name: w.location?.name,
+				country: w.location?.country,
+				units: w.request?.unit === "m" ? "Celsius" : "Fahrenheit",
+				temperature: w.current?.temperature,
+				description: w.current?.weather_descriptions?.join(","),
+			};
 		},
 	});
+
+export const getTools = (env: CloudflareBindings) => ({
+	weather: weatherTool(env),
+	// Add other tools here as needed
+});

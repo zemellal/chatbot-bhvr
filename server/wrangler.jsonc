@@ -1,20 +1,20 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
+	"$schema": "../node_modules/wrangler/config-schema.json",
 	"name": "server",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-05-25"
+	"compatibility_date": "2025-07-23",
 	// "compatibility_flags": [
 	//   "nodejs_compat"
 	// ],
 	// "vars": {
 	// 	"MY_VAR": "my-var"
 	// }
-	// "kv_namespaces": [
-	//   {
-	//     "binding": "MY_KV_NAMESPACE",
-	//     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-	//   }
-	// ],
+	"kv_namespaces": [
+		{
+			"binding": "CHATBOT_TOOL_KV",
+			"id": "a20768c0630a41f485332692be581973"
+		}
+	]
 	// "r2_buckets": [
 	//   {
 	//     "binding": "MY_BUCKET",
