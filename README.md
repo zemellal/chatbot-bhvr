@@ -25,10 +25,7 @@ cp .dev.vars.example .dev.vars
 
 #### Client
 
-```bash
-# nothing yet
-```
-
+`VITE_SERVER_URL` is used to point the client to the server API.
 
 ### Development
 
