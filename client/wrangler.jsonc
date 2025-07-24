@@ -1,0 +1,7 @@
+{
+	"name": "chatbot-client",
+	"compatibility_date": "2025-07-23",
+	"assets": {
+		"not_found_handling": "single-page-application"
+	}
+}
