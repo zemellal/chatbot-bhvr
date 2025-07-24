@@ -20,14 +20,22 @@ const weatherTool = (env: CloudflareBindings) =>
 		parameters: weatherToolSchema,
 		execute: async ({ name }) => {
 			console.log("execute weather tool");
-			const w = await fetchWeather(name, env);
-			return {
-				name: w.location?.name,
-				country: w.location?.country,
-				units: w.request?.unit === "m" ? "Celsius" : "Fahrenheit",
-				temperature: w.current?.temperature,
-				description: w.current?.weather_descriptions?.join(","),
-			};
+			try {
+				const w = await fetchWeather(name, env);
+				return {
+					name: w.location?.name,
+					country: w.location?.country,
+					units: w.request?.unit === "m" ? "Celsius" : "Fahrenheit",
+					temperature: w.current?.temperature,
+					description: w.current?.weather_descriptions?.join(","),
+				};
+			} catch (err) {
+				console.error("Weather tool error:", err);
+				// tell the AI that there was an error fetching the weather
+				return {
+					error: `Sorry, I couldn't fetch the weather for "${name}". Please check the location name and try again later.`,
+				};
+			}
 		},
 	});
 
