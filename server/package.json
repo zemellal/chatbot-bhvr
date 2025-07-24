@@ -13,12 +13,12 @@
 		"@ai-sdk/groq": "^1.2.9",
 		"@hono/zod-validator": "^0.7.2",
 		"ai": "^4.3.19",
-		"hono": "^4.7.11",
+		"hono": "^4.8.5",
 		"ollama-ai-provider": "^1.2.0",
 		"shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
-		"wrangler": "^4.25.0"
+		"wrangler": "^4.25.1"
 	}
 }

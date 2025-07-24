@@ -22,13 +22,13 @@
 	},
 	"devDependencies": {
 		"bun-types": "latest",
-		"concurrently": "^9.1.2"
+		"concurrently": "^9.2.0"
 	},
 	"peerDependencies": {
-		"typescript": "^5.7.3"
+		"typescript": "^5.8.3"
 	},
 	"dependencies": {
 		"hono": "^4.8.5",
-		"zod": "^4.0.5"
+		"zod": "^4.0.8"
 	}
 }
