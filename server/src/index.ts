@@ -48,21 +48,29 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 				// },
 				onFinish: async (r) => {
 					// Gather all necessary data for logging
-					const { usage, steps } = r;
-					const allToolResults = steps.flatMap((step) => step.toolResults);
-
-					await logRequestMetrics(
-						{
-							requestId: r.response.id,
-							modelId: r.response.modelId,
-							timestamp: r.response.timestamp,
-							usage,
-							totalSteps: steps.length,
-							totalToolCalls: allToolResults.length,
-							allToolResults,
-						},
-						c.env,
-					);
+					// const { usage, steps } = r;
+					// const allToolResults = steps.flatMap((step) => step.toolResults);
+					// if (
+					// 	steps.length > 0 ||
+					// 	allToolResults.length > 0 ||
+					// 	(usage &&
+					// 		(usage.promptTokens > 0 ||
+					// 			usage.completionTokens > 0 ||
+					// 			usage.totalTokens > 0))
+					// ) {
+					// 	await logRequestMetrics(
+					// 		{
+					// 			requestId: r.response.id,
+					// 			modelId: r.response.modelId,
+					// 			timestamp: r.response.timestamp,
+					// 			usage,
+					// 			totalSteps: steps.length,
+					// 			totalToolCalls: allToolResults.length,
+					// 			allToolResults,
+					// 		},
+					// 		c.env,
+					// 	);
+					// }
 				},
 				maxSteps: AI_MAX_STEPS,
 				// toolCallStreaming: true,
