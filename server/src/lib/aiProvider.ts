@@ -7,6 +7,7 @@ export type Provider = (typeof PROVIDERS)[number];
 export const MODELS = {
 	groq: [
 		"llama-3.3-70b-versatile",
+		"meta-llama/llama-4-maverick-17b-128e-instruct",
 		"qwen/qwen3-32b",
 		"deepseek-r1-distill-llama-70b",
 	] as const,
