@@ -83,6 +83,6 @@ export async function fetchWeather(query: string, env: CloudflareBindings) {
 	}
 
 	const data = await res.json();
-	await kv.put(cacheKey, JSON.stringify(data), { expirationTtl: 10 * 60 });
+	await kv.put(cacheKey, JSON.stringify(data), { expirationTtl: 15 * 60 });
 	return data as WeatherstackResponse;
 }

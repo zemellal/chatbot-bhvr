@@ -14,20 +14,20 @@
 			"binding": "CHATBOT_TOOL_KV",
 			"id": "a20768c0630a41f485332692be581973"
 		}
-	]
+	],
 	// "r2_buckets": [
 	//   {
 	//     "binding": "MY_BUCKET",
 	//     "bucket_name": "my-bucket"
 	//   }
 	// ],
-	// "d1_databases": [
-	//   {
-	//     "binding": "MY_DB",
-	//     "database_name": "my-database",
-	//     "database_id": ""
-	//   }
-	// ],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "chatbot_metrics",
+			"database_id": "29759cd6-62d0-4128-8760-6d59cff7927e"
+		}
+	]
 	// "ai": {
 	//   "binding": "AI"
 	// },
