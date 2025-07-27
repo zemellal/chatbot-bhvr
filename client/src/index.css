@@ -8,6 +8,12 @@
 	--bubble-font-size: 1rem;
 
 	--button-radius: 8px;
+	--button-padding: 0.6em 1.2em;
+	--button-font-size: 1em;
+	--button-font-weight: 500;
+	--button-bg: #1a1a1a;
+	--button-bg-light: #f9f9f9;
+	--button-border-color-hover: #646cff;
 
 	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 	line-height: 1.5;
@@ -45,41 +51,31 @@ h1 {
 	line-height: 1.1;
 }
 
-input {
+button,
+input,
+select {
 	border-radius: var(--button-radius);
 	border: 1px solid transparent;
-	padding: 0.6em 1.2em;
-	font-size: 1em;
-	font-weight: 500;
+	padding: var(--button-padding);
+	font-size: var(--button-font-size);
+	font-weight: var(--button-font-weight);
 	font-family: inherit;
-	background-color: #1a1a1a;
+	background-color: var(--button-bg);
 	color: inherit;
 	transition: border-color 0.25s;
 }
-input:hover {
-	border-color: #646cff;
-}
-input:focus,
-input:focus-visible {
-	outline: 4px auto -webkit-focus-ring-color;
+
+button:hover,
+input:hover,
+select:hover {
+	border-color: var(--button-border-color-hover);
 }
 
-button {
-	border-radius: var(--button-radius);
-	border: 1px solid transparent;
-	padding: 0.6em 1.2em;
-	font-size: 1em;
-	font-weight: 500;
-	font-family: inherit;
-	background-color: #1a1a1a;
-	cursor: pointer;
-	transition: border-color 0.25s;
-}
-button:hover {
-	border-color: #646cff;
-}
 button:focus,
-button:focus-visible {
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible {
 	outline: 4px auto -webkit-focus-ring-color;
 }
 
@@ -93,10 +89,9 @@ button:focus-visible {
 	a:hover {
 		color: #747bff;
 	}
-	button {
-		background-color: #f9f9f9;
-	}
-	input {
-		background-color: #f9f9f9;
+	button,
+	input,
+	select {
+		background-color: var(--button-bg-light);
 	}
 }

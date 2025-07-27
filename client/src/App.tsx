@@ -1,7 +1,8 @@
 import { hcWithType } from "server/dist/client";
 import "./App.css";
 import { useChat } from "@ai-sdk/react";
-import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { AI_MAX_STEPS } from "shared";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:8787";
@@ -9,6 +10,27 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:8787";
 const client = hcWithType(SERVER_URL);
 
 function App() {
+	// Fetch models
+	const { data: modelsData } = useQuery({
+		queryKey: ["models"],
+		queryFn: async () => {
+			const res = await fetch(client.models.$url());
+			if (!res.ok) throw new Error("Failed to fetch models");
+			const data = await res.json();
+			return data.data;
+		},
+		staleTime: 1000 * 60 * 10, // cache for 10 mins
+	});
+
+	const [selectedModel, setSelectedModel] = useState<string | undefined>(
+		undefined,
+	);
+
+	// Compose chat endpoint with model query param if selected
+	const chatApiUrl = selectedModel
+		? client.chat.$url({ query: { model: selectedModel } }).toString()
+		: client.chat.$url().toString();
+
 	const {
 		messages,
 		input,
@@ -18,7 +40,7 @@ function App() {
 		reload,
 		stop,
 		status,
-	} = useChat({ api: client.chat.$url().toString(), maxSteps: AI_MAX_STEPS });
+	} = useChat({ api: chatApiUrl, maxSteps: AI_MAX_STEPS });
 
 	const chatHistoryRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +91,25 @@ function App() {
 					</button>
 				</form>
 			</div>
+
+			{modelsData && (
+				<div className="label-group">
+					<label htmlFor="model-select">Model:</label>
+					<select
+						id="model-select"
+						value={selectedModel}
+						onChange={(e) => setSelectedModel(e.target.value)}
+					>
+						{modelsData.providers.map((provider: string) =>
+							modelsData.models[provider].map((model: string) => (
+								<option key={model} value={model}>
+									{provider}: {model}
+								</option>
+							)),
+						)}
+					</select>
+				</div>
+			)}
 
 			{status === "streaming" && (
 				<div>

@@ -24,6 +24,12 @@
 	margin: auto;
 }
 
+.label-group {
+	display: flex;
+	align-items: center;
+	gap: var(--gutter);
+}
+
 .button-container {
 	display: flex;
 	align-items: center;
