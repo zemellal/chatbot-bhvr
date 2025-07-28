@@ -14,7 +14,7 @@ function App() {
 	const { data: modelsData } = useQuery({
 		queryKey: ["models"],
 		queryFn: async () => {
-			const res = await fetch(client.models.$url());
+			const res = await client.models.$get();
 			if (!res.ok) throw new Error("Failed to fetch models");
 			const data = await res.json();
 			return data.data;
@@ -100,8 +100,8 @@ function App() {
 						value={selectedModel}
 						onChange={(e) => setSelectedModel(e.target.value)}
 					>
-						{modelsData.providers.map((provider: string) =>
-							modelsData.models[provider].map((model: string) => (
+						{modelsData.providers.map((provider) =>
+							modelsData.models[provider].map((model) => (
 								<option key={model} value={model}>
 									{provider}: {model}
 								</option>
