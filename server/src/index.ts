@@ -2,9 +2,14 @@ import { generateText, streamText as streamTextAi } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { stream } from "hono/streaming";
+import { validator } from "hono/validator";
 import { AI_MAX_STEPS } from "shared/dist";
+import z from "zod";
 import { getValidatedModelAndTools, MODELS, PROVIDERS } from "./lib/aiProvider";
-import { getRecentMetrics, logRequestMetrics } from "./lib/metrics";
+import { QUERY_TYPES } from "./lib/constants";
+import { getModelSummaryForQuery, getRecentMetrics } from "./lib/metrics";
+import { createQuery, getAllQueries } from "./lib/queries";
+import { runTestForQuery } from "./lib/testing";
 import { fetchWeather } from "./lib/weather";
 
 export const app = new Hono<{ Bindings: CloudflareBindings }>()
@@ -46,7 +51,7 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 				// 	});
 				// 	// your own logic, e.g. for saving the chat history or recording usage
 				// },
-				onFinish: async (r) => {
+				onFinish: async () => {
 					// Gather all necessary data for logging
 					// const { usage, steps } = r;
 					// const allToolResults = steps.flatMap((step) => step.toolResults);
@@ -93,13 +98,14 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		}
 	})
 
-	.post("/ai-tool-test", async (c) => {
-		const prompt = c.req.query("prompt");
-
+	.post("/generate-text", async (c) => {
 		try {
+			const { prompt, provider, model, expectedTools, type, queryId } =
+				await c.req.json();
+
 			const { modelInstance, tools, error } = getValidatedModelAndTools({
-				provider: c.req.query("provider"),
-				model: c.req.query("model"),
+				provider,
+				model,
 				env: c.env,
 			});
 			if (error) return c.json(error, { status: 400 });
@@ -111,22 +117,7 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 				prompt: prompt || "What is the weather in San Francisco?",
 			});
 
-			// const allToolCalls = steps.flatMap((step) => step.toolCalls);
 			const allToolResults = steps.flatMap((step) => step.toolResults);
-			// const allUsage = steps.flatMap((step) => step.usage);
-
-			await logRequestMetrics(
-				{
-					requestId: response.id,
-					modelId: response.modelId,
-					timestamp: response.timestamp,
-					usage: usage,
-					totalSteps: steps.length,
-					totalToolCalls: allToolResults.length,
-					allToolResults,
-				},
-				c.env,
-			);
 
 			return c.json(
 				{
@@ -141,13 +132,135 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 						totalToolCalls: allToolResults.length,
 						allToolResults,
 						steps: steps,
-						// response: response,
 					},
 				},
 				{ status: 200 },
 			);
 		} catch (err) {
-			console.error("Error in /ai-tool-test:", err);
+			console.error("Error in /generate-text:", err);
+			const message = err instanceof Error ? err.message : String(err);
+			return c.json(
+				{ success: false, error: message || "Unknown error" },
+				{ status: 500 },
+			);
+		}
+	})
+
+	.post(
+		"/queries",
+		validator("json", (value, c) => {
+			const parsed = z
+				.object({
+					prompt: z.string(),
+					expectedTools: z.array(z.string()),
+					type: z.enum(QUERY_TYPES),
+				})
+				.safeParse(value);
+			if (!parsed.success) {
+				return c.json(
+					{ success: false, error: parsed.error.issues },
+					{ status: 401 },
+				);
+			}
+			return parsed.data;
+		}),
+		async (c) => {
+			try {
+				const { prompt, expectedTools, type } = c.req.valid("json");
+
+				const query = await createQuery({
+					prompt,
+					expectedTools,
+					type,
+					env: c.env,
+				});
+				return c.json({
+					success: true,
+					message: "Query created successfully.",
+					data: { query: query },
+				});
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				return c.json(
+					{ success: false, error: message || "Unknown error" },
+					{ status: 500 },
+				);
+			}
+		},
+	)
+
+	.get("/queries", async (c) => {
+		try {
+			const queries = await getAllQueries(c.env);
+			return c.json({
+				success: true,
+				message: "Queries fetched successfully.",
+				data: queries,
+			});
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			return c.json(
+				{ success: false, error: message || "Unknown error" },
+				{ status: 500 },
+			);
+		}
+	})
+
+	.post(
+		"/test-query",
+		validator("json", (value, c) => {
+			const parsed = z
+				.object({
+					queryId: z.string(),
+				})
+				.safeParse(value);
+			if (!parsed.success) {
+				return c.json(
+					{ success: false, error: parsed.error.issues },
+					{ status: 401 },
+				);
+			}
+			return parsed.data;
+		}),
+		async (c) => {
+			try {
+				const { queryId } = c.req.valid("json");
+
+				const results = await runTestForQuery(queryId, c.env);
+
+				return c.json({
+					success: true,
+					message: "Test run completed.",
+					data: results,
+				});
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				return c.json(
+					{ success: false, error: message || "Unknown error" },
+					{ status: 500 },
+				);
+			}
+		},
+	)
+
+	.get("/query-summary/:queryId", async (c) => {
+		try {
+			const queryId = c.req.param("queryId");
+			if (!queryId) {
+				return c.json(
+					{ success: false, error: "Missing queryId in path." },
+					{ status: 400 },
+				);
+			}
+
+			const summary = await getModelSummaryForQuery(queryId, c.env);
+
+			return c.json({
+				success: true,
+				message: "Query summary fetched successfully.",
+				data: summary,
+			});
+		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			return c.json(
 				{ success: false, error: message || "Unknown error" },
