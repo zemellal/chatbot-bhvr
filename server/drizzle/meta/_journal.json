@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1753609041579,
+      "tag": "0000_aberrant_morlun",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1753654467070,
+      "tag": "0001_wakeful_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1753743230075,
+      "tag": "0002_tense_adam_destine",
+      "breakpoints": true
+    }
+  ]
+}

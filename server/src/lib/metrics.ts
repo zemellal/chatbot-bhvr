@@ -28,6 +28,9 @@ type ToolCallMetrics = {
 	result: object; // JSON string
 };
 
+/**
+ * Logs the result of a model test, including request and tool call metrics, to the database.
+ */
 export async function logModelTestResult(
 	data: RequestMetrics,
 	env: CloudflareBindings,
@@ -41,6 +44,9 @@ export async function logModelTestResult(
 		promptTokens: data.usage.promptTokens,
 		totalSteps: data.totalSteps,
 		totalToolCalls: data.totalToolCalls,
+		toolsUsed: data.toolsUsed,
+		missingTools: data.missingTools,
+		unexpectedTools: data.unexpectedTools,
 		completionTokens: data.usage.completionTokens,
 		totalTokens: data.usage.totalTokens,
 		errorMessage: data.errorMessage,
@@ -58,15 +64,27 @@ export async function logModelTestResult(
 	await db.insert(toolCalls).values(toolCallValues);
 }
 
+/**
+ * Retrieves recent AI request metrics from the database.
+ */
 export async function getRecentMetrics(env: CloudflareBindings) {
 	const db = drizzle(env.DB);
 	const recentRequests = await db.select().from(aiRequests).all();
 	return recentRequests;
 }
 
+type ModelSummaryFilter = {
+	hasMissingTools?: boolean;
+	hasUnexpectedTools?: boolean;
+};
+
+/**
+ * Fetches and summarizes model performance for a specific query, optionally filtered by tool usage.
+ */
 export async function getModelSummaryForQuery(
 	queryId: string,
 	env: CloudflareBindings,
+	filter?: ModelSummaryFilter,
 ) {
 	const db = drizzle(env.DB, { schema });
 
@@ -93,6 +111,11 @@ export async function getModelSummaryForQuery(
 			count: number;
 			totalTokens: number;
 			totalToolCalls: number;
+			hasMissingTools: boolean;
+			hasUnexpectedTools: boolean;
+			allMissingTools: string[];
+			allUnexpectedTools: string[];
+			toolAccuracy?: number | null;
 			requests: typeof requests;
 		}
 	> = {};
@@ -104,12 +127,18 @@ export async function getModelSummaryForQuery(
 				count: 0,
 				totalTokens: 0,
 				totalToolCalls: 0,
+				hasMissingTools: false,
+				hasUnexpectedTools: false,
+				allMissingTools: [],
+				allUnexpectedTools: [],
 				requests: [],
 			};
 		}
-		summaryByModel[model].count += 1;
-		summaryByModel[model].totalTokens += req.totalTokens;
-		summaryByModel[model].totalToolCalls += req.totalToolCalls;
+		const modelSummary = summaryByModel[model];
+
+		modelSummary.count += 1;
+		modelSummary.totalTokens += req.totalTokens;
+		modelSummary.totalToolCalls += req.totalToolCalls;
 
 		// Normalize toolsUsed, missingTools, unexpectedTools
 		const toolsUsed = req.toolsUsed
@@ -128,7 +157,16 @@ export async function getModelSummaryForQuery(
 				: req.unexpectedTools
 			: [];
 
-		summaryByModel[model].requests.push({
+		if (missingTools.length > 0) {
+			modelSummary.hasMissingTools = true;
+			modelSummary.allMissingTools.push(...missingTools);
+		}
+		if (unexpectedTools.length > 0) {
+			modelSummary.hasUnexpectedTools = true;
+			modelSummary.allUnexpectedTools.push(...unexpectedTools);
+		}
+
+		modelSummary.requests.push({
 			...req,
 			toolsUsed,
 			missingTools,
@@ -136,8 +174,39 @@ export async function getModelSummaryForQuery(
 		});
 	}
 
+	for (const [_model, modelSummary] of Object.entries(summaryByModel)) {
+		const totalRequests = modelSummary.requests.length;
+		const correctRequests = modelSummary.requests.filter(
+			(req) =>
+				(req.missingTools as string[]).length === 0 &&
+				(req.unexpectedTools as string[]).length === 0,
+		).length;
+
+		modelSummary.toolAccuracy =
+			totalRequests > 0 ? (correctRequests / totalRequests) * 100 : null;
+
+		modelSummary.allMissingTools = [...new Set(modelSummary.allMissingTools)];
+		modelSummary.allUnexpectedTools = [
+			...new Set(modelSummary.allUnexpectedTools),
+		];
+	}
+
+	let filteredSummaryByModel = summaryByModel;
+
+	if (filter) {
+		filteredSummaryByModel = Object.fromEntries(
+			Object.entries(summaryByModel).filter(([_, modelSummary]) => {
+				if (filter.hasMissingTools && !modelSummary.hasMissingTools)
+					return false;
+				if (filter.hasUnexpectedTools && !modelSummary.hasUnexpectedTools)
+					return false;
+				return true;
+			}),
+		);
+	}
+
 	return {
 		query,
-		summaryByModel,
+		summaryByModel: filteredSummaryByModel,
 	};
 }

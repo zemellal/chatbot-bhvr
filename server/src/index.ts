@@ -20,6 +20,9 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		return c.text("Hello Hono!");
 	})
 
+	/**
+	 * Streams AI-generated chat responses based on provided messages.
+	 */
 	.post("/chat", async (c) => {
 		try {
 			const { messages } = await c.req.json();
@@ -41,42 +44,6 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 				model: modelInstance,
 				messages,
 				tools,
-				// onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
-				// 	console.log("Step finished:", {
-				// 		text,
-				// 		toolCalls,
-				// 		toolResults,
-				// 		finishReason,
-				// 		usage,
-				// 	});
-				// 	// your own logic, e.g. for saving the chat history or recording usage
-				// },
-				onFinish: async () => {
-					// Gather all necessary data for logging
-					// const { usage, steps } = r;
-					// const allToolResults = steps.flatMap((step) => step.toolResults);
-					// if (
-					// 	steps.length > 0 ||
-					// 	allToolResults.length > 0 ||
-					// 	(usage &&
-					// 		(usage.promptTokens > 0 ||
-					// 			usage.completionTokens > 0 ||
-					// 			usage.totalTokens > 0))
-					// ) {
-					// 	await logRequestMetrics(
-					// 		{
-					// 			requestId: r.response.id,
-					// 			modelId: r.response.modelId,
-					// 			timestamp: r.response.timestamp,
-					// 			usage,
-					// 			totalSteps: steps.length,
-					// 			totalToolCalls: allToolResults.length,
-					// 			allToolResults,
-					// 		},
-					// 		c.env,
-					// 	);
-					// }
-				},
 				maxSteps: AI_MAX_STEPS,
 				// toolCallStreaming: true,
 				// onError(err) {},
@@ -88,7 +55,6 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 			c.header("Content-Encoding", "Identity");
 
 			return stream(c, (stream) => stream.pipe(result.toDataStream()));
-			// return result.toDataStreamResponse();
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			return c.json(
@@ -98,10 +64,12 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		}
 	})
 
+	/**
+	 * Generates a single AI text completion based on a prompt.
+	 */
 	.post("/generate-text", async (c) => {
 		try {
-			const { prompt, provider, model, expectedTools, type, queryId } =
-				await c.req.json();
+			const { prompt, provider, model, expectedTools } = await c.req.json();
 
 			const { modelInstance, tools, error } = getValidatedModelAndTools({
 				provider,
@@ -130,6 +98,7 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 						usage: usage,
 						totalSteps: steps.length,
 						totalToolCalls: allToolResults.length,
+						expectedTools,
 						allToolResults,
 						steps: steps,
 					},
@@ -146,6 +115,9 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		}
 	})
 
+	/**
+	 * Creates a new query for testing or analytics.
+	 */
 	.post(
 		"/queries",
 		validator("json", (value, c) => {
@@ -189,6 +161,9 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		},
 	)
 
+	/**
+	 * Retrieves all stored queries.
+	 */
 	.get("/queries", async (c) => {
 		try {
 			const queries = await getAllQueries(c.env);
@@ -206,6 +181,9 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		}
 	})
 
+	/**
+	 * Runs a test for a specific query by ID.
+	 */
 	.post(
 		"/test-query",
 		validator("json", (value, c) => {
@@ -243,6 +221,9 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		},
 	)
 
+	/**
+	 * Fetches a summary of model performance for a specific query.
+	 */
 	.get("/query-summary/:queryId", async (c) => {
 		try {
 			const queryId = c.req.param("queryId");
@@ -253,7 +234,14 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 				);
 			}
 
-			const summary = await getModelSummaryForQuery(queryId, c.env);
+			// Read query params as booleans
+			const hasMissingTools = c.req.query("hasMissingTools") === "true";
+			const hasUnexpectedTools = c.req.query("hasUnexpectedTools") === "true";
+
+			const summary = await getModelSummaryForQuery(queryId, c.env, {
+				hasMissingTools,
+				hasUnexpectedTools,
+			});
 
 			return c.json({
 				success: true,
@@ -269,6 +257,9 @@ export const app = new Hono<{ Bindings: CloudflareBindings }>()
 		}
 	})
 
+	/**
+	 * Lists available AI providers and models.
+	 */
 	.get("/models", (c) => {
 		return c.json({
 			success: true,
