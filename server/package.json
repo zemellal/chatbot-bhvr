@@ -13,14 +13,14 @@
 		"@ai-sdk/groq": "^1.2.9",
 		"@hono/zod-validator": "^0.7.2",
 		"ai": "^4.3.19",
-		"drizzle-orm": "^0.44.3",
-		"hono": "^4.8.5",
+		"drizzle-orm": "^0.44.4",
+		"hono": "^4.8.10",
 		"ollama-ai-provider": "^1.2.0",
 		"shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
 		"drizzle-kit": "^0.31.4",
-		"wrangler": "^4.25.1"
+		"wrangler": "^4.26.1"
 	}
 }
